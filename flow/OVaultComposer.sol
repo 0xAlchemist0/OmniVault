@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 //deposit then swap on shadow
 import { VaultComposerSync } from "@layerzerolabs/ovault-evm/contracts/VaultComposerSync.sol";
 import "@layerzerolabs/ovm-integration-interfaces/contracts/lzApp/NonblockingLzApp.sol";
-;
+
 //to make things easier users deposit omni token  + omni usdc
 //bridge usdc then swap on hub chain 
 contract OVaultComposer is VaultComposerSync{
@@ -49,13 +49,15 @@ contract OVaultComposer is VaultComposerSync{
    function lzCompose(
         address _oApp,
         bytes32 /* _guid */,
-        bytes calldata /* _message */,
+        bytes calldata _message/* _message */,
         address /* _executor */,
         bytes calldata /* _extraData */
     ) external payable override {
         // Ensure the composed message comes from the correct OApp.
         require(_oApp == oApp, "ComposedReceiver: Invalid OApp");
         require(msg.sender == endpoint, "ComposedReceiver: Unauthorized sender");
+        //message should always have the user address that calls the function 
+        (address _user) = abi.decode(_message, (address));
         // ... execute logic for handling composed messages
     }
 }

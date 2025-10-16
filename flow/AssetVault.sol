@@ -2,8 +2,8 @@
 pragma solidity 0.8.7;
 
 import "https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC4626.sol";
-
-contract DragonVault is ERC4626 {
+//just deploy two of thse no need for two similar vault contracts
+contract AssetVault is ERC4626 {
     // a mapping that checks if a user has deposited the token
     //seems like strign balances locally is beter 
     mapping(address => uint256) public shareHolder;
@@ -19,10 +19,14 @@ contract DragonVault is ERC4626 {
      * @param _assets amount of the asset token
      */
     //  Sonic (hub) is the main vault. It’s where the real tokens are kept and where the real deposits and withdrawals happen.
+
+
     function _deposit(uint _assets) public {
         // checks that the deposited amount is greater than zero.
         require(_assets > 0, "Deposit less than Zero");
         // calling the deposit function from the ERC-4626 library to perform all the necessary functionality
+        //the deeposit transfers the callers tokens of the asset into the contract its built in the erc46426 
+        //uses safeTransferFrom(msg.sender, address(this), _assets)
         deposit(_assets, msg.sender);
         // Increase the share of the user
         shareHolder[msg.sender] += _assets;
@@ -61,23 +65,12 @@ contract DragonVault is ERC4626 {
     function totalAssetsOfUser(address _user) public view returns (uint256) {
         return asset.balanceOf(_user);
     }
-}//SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
 
-import "https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC4626.sol";
 
-contract NativeVault is ERC4626 {
-    //just intialize we call the vaults functions i n the adapterhere we inherit the contract
-  constructor(ERC20 _token) ERC4626(_token){}
+
+    function setAssets(address owner, uint256 _assets)external{
+        //this we call when we check the current position of the asset deposited in the lp position in the unifier there wil be a function to simotaneously update both asset balances 
+        //the position getting will always be called on the frontend
+        shareHolder[owner] = _assets;
+    }
 }
-
-//chapter 5 chapter 4 
-//wraps
-contract NativeVaultAdapter is OFTAdapter{
-    AssetVault public vault;
-
-
-    constructor 
-}
-
-
