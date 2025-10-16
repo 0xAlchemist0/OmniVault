@@ -8,7 +8,7 @@ import { VaultComposerSync } from "@layerzerolabs/ovault-evm/contracts/VaultComp
 //bridge usdc then swap on hub chain 
 contract OVaultComposer is VaultComposerSync{
     //thi is where we will call and do stuff for th vault when we get amessage from another chain 
-    VaultAdater _vult;
+    VaultAdater _vault;
     constructor(
         address _vault,
         address _assetOFT,
