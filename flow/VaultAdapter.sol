@@ -7,12 +7,14 @@ pragma solidity ^0.8.20;
 //this will be deployed on other chins
 //use router for the route[] struct
 import {ISwapHandler} from "./ISwapHandler.sol";
+import {VaultUnifier} from "./VaultUnifier.sol";
 contract VaultAdapter is OFTAdapter, IRouter{
     address public vaultAsset;
     //this is the asst e convert to wrappd sonic
     //for now we try t use omnichain btc cuz sonic dont got alot of ofts
     address public oAsset = 0x0555e30da8f98308edb960aa94c0db47230d2b9c;
     Vault public vault;
+    VaultUnifier public unifiedVault;
     ISwaphandler public dexRouter;
 
        constructor(
@@ -20,6 +22,7 @@ contract VaultAdapter is OFTAdapter, IRouter{
         address _lzEndpoint,
         address _delegate,
         address _router,
+        address _unifiedVault,
         address tokenDeposited
     ) OFTAdapter(_token, _lzEndpoint, _delegate) Ownable(_delegate) {
         vault = _token;
@@ -27,6 +30,7 @@ contract VaultAdapter is OFTAdapter, IRouter{
         vaultAsset = vault.asset();
         // /router we set which is wherewe will do swaps and quote obtaining 
         dexRouter = _router;
+        unifiedVault = _unifiedVault;
     }
 
 //aount out min is the _assets from swap and deposit
@@ -60,7 +64,7 @@ contract VaultAdapter is OFTAdapter, IRouter{
         uint256 _amountRecieved = swap(_assets);
         // vault.deposit()
     }
-
+//mybe hndale it like this layer zero message s we pass in the type of transaction we do and pass the sender of the message to stor there data in the contracts
 }
 
 

@@ -45,6 +45,16 @@ interface IPoolManager is IncreaseLiquidityParams {
         returns (uint256 amount0, uint256 amount1);
 }
 
+//tthis adds liquidity and mints a new nft returns the token id here with this token id we can manage users postions
+   function mint(
+        MintParams calldata params
+    )
+        external
+        payable
+        override
+        checkDeadline(params.deadline)
+        returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
+
 //increase liquidity, decrase liquidity, Positon nft contract -> 
 
 // gotta make a good secure system to amange all of this the contract will hold all ositionsso u gotta mange how it handles withrws etc
