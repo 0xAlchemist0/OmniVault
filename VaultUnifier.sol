@@ -3,7 +3,20 @@ pragma solidity ^0.8.20;
 import {AssetVault} from "./flow/AssetVault.sol";
 import {IPoolManager} from "./IPoolManager.sol";
 import "https://github.com/Shadow-Exchange/shadow-core/blob/main/contracts/CL/periphery/interfaces/INonfungiblePositionManager.sol";
+Owed1;
+
 contract VaultUnifier{
+    struct Position {
+    address token0;
+    address token1;
+    int24 tickSpacing;
+    int24 tickLower;
+    int24 tickUpper;
+    uint128 liquidity;
+    uint256 feeGrowthInside0LastX128;
+    uint256 feeGrowthInside1LastX128;
+    uint128 tokensOwed0;
+    uint128 tokens}
     //get both vaults were we can get assets for both 
     AssetVault vaultA;
     AssetVault vaultB;
@@ -15,6 +28,10 @@ vaultA = _vaultA;
 vaultB = _vaultB;
 poolManager = _poolManager;
 }
+
+//this is what is returned from the quote we use this so we dont have to write a shit ton of code
+// /prolly better t put in another file 
+
 //mint parms struct
 //     address token0;
         // address token1;
@@ -29,45 +46,21 @@ poolManager = _poolManager;
         // uint256 deadline;
 //very layer zero message should pass in the sender of the transaction this way e can check nd store each users info properly and their positons
 function addLiquidity(MintParams calldata params, address sender){
+
+    //we set the mapping owner => positionID
     poolPositions[sender] = poolManager.mint(params);
 }
 
 
 //returns an array contains the balance of tokena and tokenb use equation then return and we update values
-function calculatePostions(calldata[] _position) returns (uint256[]){
+//calldta type means the valu is read only no copy is made most efficient and heapest
+function calculatePostions(bytes[] calldata _position) returns (uint256[]){
 
 }
 
-
+//follows th shadowswap dex fucntions 
 function getPosition(address _owner){
-    (
-               address token0,
-            address token1,
-            int24 tickSpacing,
-            int24 tickLower,
-            int24 tickUpper,
-            uint128 liquidity,
-            uint256 feeGrowthInside0LastX128,
-            uint256 feeGrowthInside1LastX128,
-            uint128 tokensOwed0,
-            uint128 tokensOwed1
-    )  = _poolManager.positins(poolPositions[_owner]);
-//encode for more efficiency 
-    uint256[] positions = calculatePostions(
-        abi.encode(
-            address token0,
-            address token1,
-            int24 tickSpacing,
-            int24 tickLower,
-            int24 tickUpper,
-            uint128 liquidity,
-            uint256 feeGrowthInside0LastX128,
-            uint256 feeGrowthInside1LastX128,
-            uint128 tokensOwed0,
-            uint128 tokensOwed1
-    )
-    );
-
+    
 }
 
 

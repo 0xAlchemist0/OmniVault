@@ -1,0 +1,5 @@
+storage → permanent, on-chain storage (state variables).
+
+memory → temporary, read–write data in RAM during execution.
+
+calldata → temporary, read-only data for function inputs (cheaper and used in external functions).
