@@ -116,3 +116,5 @@ interface IPoolManager is IncreaseLiquidityParams {
 //increase liquidity, decrase liquidity, Positon nft contract -> 
 
 // gotta make a good secure system to amange all of this the contract will hold all ositionsso u gotta mange how it handles withrws etc
+
+//cell structure and fucntion 

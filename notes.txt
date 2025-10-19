@@ -3,3 +3,60 @@ storage → permanent, on-chain storage (state variables).
 memory → temporary, read–write data in RAM during execution.
 
 calldata → temporary, read-only data for function inputs (cheaper and used in external functions).
+
+//calldta type means the valu is read only no copy is made most efficient and heapest
+
+
+When you use `abi.encode(...)`, Solidity converts the data into **ABI-encoded binary bytes** — specifically a `bytes` type containing the raw **binary representation** of the arguments.
+It follows the **Ethereum ABI specification**, which means fixed-size types (like `uint256`, `address`) are 32-byte padded, and dynamic types (like `bytes`, `string`, `arrays`) include length + data segments.
+So the output is just a long, tightly formatted `bytes` blob — perfect for sending in messages, storing compactly, or decoding later with `abi.decode`.
+
+
+
+
+
+lp ticks 
+
+Ticks are just markers for price ranges.
+
+tickLower = bottom of your range.
+
+tickUpper = top of your range.
+
+Your liquidity only exists and earns fees between these two ticks.
+
+Think of it like putting your money in a specific price bucket instead of the whole pool.
+
+so i posit a specific rand and it goes belw abive what happens to my positons and funcds it automatically goes to my wallet or what
+
+
+
+calculating balances equation flow 
+
+// 1️⃣ Get position data from NonfungiblePositionManager
+(token0, token1, tickSpacing, tickLower, tickUpper, liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1)
+    = positionManager.positions(tokenId);
+//the ** means numberA raid to the nmberB power
+// 2️⃣ Get current sqrt price of the pool
+(sqrtPriceX96, , , , , , ) = pool.slot0();
+P_current = sqrtPriceX96 / 2**96;
+
+// 3️⃣ Convert ticks to sqrt prices
+P_lower = sqrt(1.0001 ** tickLower);
+P_upper = sqrt(1.0001 ** tickUpper);
+
+// 4️⃣ Compute token balances depending on P_current position
+if (P_current <= P_lower) {
+    amount0 = liquidity * (P_upper - P_lower) / (P_lower * P_upper);
+    amount1 = 0;
+} else if (P_current < P_upper) {
+    amount0 = liquidity * (P_upper - P_current) / (P_current * P_upper);
+    amount1 = liquidity * (P_current - P_lower);
+} else {
+    amount0 = 0;
+    amount1 = liquidity * (P_upper - P_lower);
+}
+
+// 5️⃣ Add uncollected fees
+total0 = amount0 + tokensOwed0;
+total1 = amount1 + tokensOwed1;

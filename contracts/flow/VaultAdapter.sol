@@ -16,7 +16,7 @@ contract VaultAdapter is OFTAdapter, IRouter{
     Vault public vault;
     VaultUnifier public unifiedVault;
     ISwaphandler public dexRouter;
-
+//here we set the endpoint this is what allows us to send and compose the messgaes we recieve 
        constructor(
         address _token,
         address _lzEndpoint,
