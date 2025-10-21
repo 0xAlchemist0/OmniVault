@@ -42,7 +42,7 @@ contract AssetVault is ERC4626 {
         // calling the deposit function from the ERC-4626 library to perform all the necessary functionality
         //the deeposit transfers the callers tokens of the asset into the contract its built in the erc46426
         //uses safeTransferFrom(msg.sender, address(this), _assets)
-        deposit(_assets, msg.sender);
+        deposit(_assets);
         // Increase the share of the user
         assets[_user] += _assets;
     }

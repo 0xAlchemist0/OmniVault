@@ -5,6 +5,8 @@ pragma solidity ^0.8.20;
 // Adapter: wraps vault shares as omnichain OFTs
 //this will be deployed on other chins
 //use router for the route[] struct
+
+// /there wil be two adapters deployrf because each adaper should be unique one vault per adapter due to oftadapters constructor nature
 import {ISwapHandler} from "./ISwapHandler.sol";
 import {VaultUnifier} from "./VaultUnifier.sol";
 
@@ -38,6 +40,8 @@ contract VaultAdapter is OFTAdapter, IRouter {
     } //rmember t implement ownble and security check each function when done
 
     function setOAsset(address _oAsset) external {
+        //n withdraw when updated this possibly wont be able to happen everything is fixed system works in a fixed manner
+        //over time contracts will be upgraded with an improved flow this is just an initial setup flow
         oAsset = _oAsset;
     }
 
@@ -66,14 +70,14 @@ contract VaultAdapter is OFTAdapter, IRouter {
 
     ///swap and then send message to transfer to sonic to deposit
 
-    function getQuote(
-        uint256 amountIn,
-        route[] routes
-    ) public returns (uint256[] memory) {
-        uint256[] memory quote = ISwaphandler.getAmountsOut(amountIn, routes);
+    // function getQuote(
+    //     uint256 amountIn,
+    //     route[] routes
+    // ) public returns (uint256[] memory) {
+    //     uint256[] memory quote = ISwaphandler.getAmountsOut(amountIn, routes);
 
-        return quote;
-    }
+    //     return quote;
+    // }
 
     //omnivault
     //mainasset = omnidragon
@@ -83,6 +87,7 @@ contract VaultAdapter is OFTAdapter, IRouter {
     //if its the oasset it swaps into the token for the vault if its not main token(isMainToken)
     //this function for detecting the  kind of asset we are depositing if its not our dragon token we swap and then deposit
     function excecuteDeposit(uint256 _amount, address _user) external {
+        // vaultAsset.safeTransferFrom();
         //we need _user to store how much they hold in the vault
         //deposits the asset into the vault
         if (isMainAsset) vault.deposit(_amount, _user);
@@ -95,7 +100,6 @@ contract VaultAdapter is OFTAdapter, IRouter {
         //swaps to the asset we need and then deposits
         uint256 _amountRecieved = swap(_assets);
         vault.deposit(_amountRecieved, _user);
-        return _amountRecieved;
     }
     //mybe hndale it like this layer zero message s we pass in the type of transaction we do and pass the sender of the message to stor there data in the contracts
 }
@@ -103,3 +107,4 @@ contract VaultAdapter is OFTAdapter, IRouter {
 // deposit dragon oft - > bridge to sonic chain(hub) -> posit into vault
 
 // deposit btc oft -> bridge to sonic chain (hub) into the native vault contract ->
+//we have to have a clear flow of things and see how each asset lands in each contract to finnallly be deposited a sa lp
