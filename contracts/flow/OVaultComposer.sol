@@ -6,11 +6,18 @@ pragma solidity ^0.8.20;
 import {VaultComposerSync} from "@layerzerolabs/ovault-evm/contracts/VaultComposerSync.sol";
 import "@layerzerolabs/ovm-integration-interfaces/contracts/lzApp/NonblockingLzApp.sol";
 import {ILayerZeroReceiver} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroReceiver.sol";
+import "https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
+//here is where we handle message sends messagerecevals etc
 //to make things easier users deposit omni token  + omni usdc
 //bridge usdc then swap on hub chain
 //deploy twice for both vaults
-contract OVaultComposer is ILayerZeroReceiver, VaultComposerSync {
+//this interface allow us to use the snd message function
+contract OVaultComposer is
+    ILayerZeroReceiver,
+    VaultComposerSync,
+    ILayerZeroEndpointV2
+{
     //thi is where we will call and do stuff for th vault when we get amessage from another chain
     VaultAdater vault;
 
@@ -31,6 +38,28 @@ contract OVaultComposer is ILayerZeroReceiver, VaultComposerSync {
         //here is basically an event listener then mesage gets passed on to compose to excecute whatever needs to be done
         lzCompose(address(this), _payload);
         //onl gotta pass in the impartant stuff it doesnt call compose immidiatley it quotes then calls compose the rest of the params l0 fills it p
+    }
+
+    ///vult adapter will use all functionalities send, recieve, and compose
+
+    // struct MessagingParams {
+    //     uint32 dstEid;
+    //     bytes32 receiver;
+    //     bytes message;
+    //     bytes options;
+    //     bool payInLzToken;
+    // }
+    // the _refundAddress is the address that will receive any excess native token (e.g., ETH) that wasn’t used for the message fees.
+    //should be structured when passed on frontend or backend?
+    function _lzSend(MessagingParams _message, adress _refundAddress) private {
+        //to keep message send reciepts a opposed to using a 2 mpping less gas efficient we use event emitters
+        MessagingParams _recieptMessage = send(_message, _refundAddress);
+        //receipt is logged on blockhain scan
+        emit _recieptMessage(
+            _recieptMessage.dstEid,
+            _recieptMessage.reciever,
+            _recieptMessage.message
+        );
     }
 
     //composes the message and sends the message out where it needs to go
