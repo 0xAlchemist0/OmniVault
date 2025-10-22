@@ -8,7 +8,7 @@ contract AssetVault is ERC4626 {
     // a mapping that checks if a user has deposited the token
     //seems like strign balances locally is beter
   
-    mapping(address => uint256) public assets;
+    mapping(address => uint256) public assetsDeposited;
 
 
     //handles dragon deposits
@@ -49,7 +49,7 @@ contract AssetVault is ERC4626 {
         //uses safeTransferFrom(msg.sender, address(this), _assets)
         deposit(_assets);
         // Increase the share of the user
-        assets[_user] += _assets;
+        assetsDeposited[_user] += _assets;
     }
 
     /**
@@ -70,7 +70,7 @@ contract AssetVault is ERC4626 {
         // calling the redeem function from the ERC-4626 library to perform all the necessary functionality
         redeem(_shares, _receiver, msg.sender);
         // Decrease the share of the user
-        assets[msg.sender] -= _shares;
+        assetsDeposited[msg.sender] -= _shares;
     }
 
     // returns total number of assets
@@ -78,6 +78,10 @@ contract AssetVault is ERC4626 {
     function getAmountDeosited(address _owner) public view override returns (uint256) {
         //returns the balance on the user the balance thy have deposited
         return assets[_owner];
+    }
+
+    function updateAssetsDeposited(uint256 _assets, address _user)public{
+        assetsDeposited[user] = _assets;
     }
 
     // returns total balance of user

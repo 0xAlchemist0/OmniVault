@@ -31,7 +31,7 @@ contract VaultUnifier {
     AssetVault vaultB;
     IPoolManager poolManager;
     IDragonPool pool;
-    mapping(address => uint256) poolPositions; //we store here and update positions
+    mapping(address => uint256[]) poolPositions; //we store here and update positions
 
     //wunifies both vaults vaults to perform the lp depositt
     constructor(address _vaultA, address vaultB, address _poolManager) {
@@ -61,6 +61,8 @@ contract VaultUnifier {
         //we set the mapping owner => positionID
         poolPositions[sender] = poolManager.mint(params);
     }
+
+    //inorder to add liuiditywhat we do is trnsfer the vaults assets to this contract deposit into lp and store deposits in a mapping
 
     //uint - positive, int- both
     //returns an array contains the balance of tokena and tokenb use equation then return and we update values

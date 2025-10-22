@@ -36,27 +36,43 @@ calculating balances equation flow
 // 1️⃣ Get position data from NonfungiblePositionManager
 (token0, token1, tickSpacing, tickLower, tickUpper, liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1)
     = positionManager.positions(tokenId);
+
+
 //the ** means numberA raid to the nmberB power
 // 2️⃣ Get current sqrt price of the pool
 (sqrtPriceX96, , , , , , ) = pool.slot0();
 P_current = sqrtPriceX96 / 2**96;
 
-// 3️⃣ Convert ticks to sqrt prices
-P_lower = sqrt(1.0001 ** tickLower);
-P_upper = sqrt(1.0001 ** tickUpper);
-
-// 4️⃣ Compute token balances depending on P_current position
-if (P_current <= P_lower) {
-    amount0 = liquidity * (P_upper - P_lower) / (P_lower * P_upper);
-    amount1 = 0;
-} else if (P_current < P_upper) {
-    amount0 = liquidity * (P_upper - P_current) / (P_current * P_upper);
-    amount1 = liquidity * (P_current - P_lower);
-} else {
-    amount0 = 0;
-    amount1 = liquidity * (P_upper - P_lower);
-}
 
 // 5️⃣ Add uncollected fees
 total0 = amount0 + tokensOwed0;
 total1 = amount1 + tokensOwed1;
+
+///////////
+
+P_current = sqrtPriceX96 / 2**96; // current sqrt price (token1/token0)
+P_lower   = sqrt(1.0001 ** tickLower);
+P_upper   = sqrt(1.0001 ** tickUpper);
+
+
+if (P_current <= P_lower) {
+    // position is entirely in token0
+    amount0 = liquidity * (P_upper - P_lower) / (P_lower * P_upper);
+    amount1 = 0;
+}
+else if (P_current < P_upper) {
+    // active range — mix of both tokens
+    amount0 = liquidity * (P_upper - P_current) / (P_current * P_upper);
+    amount1 = liquidity * (P_current - P_lower);
+}
+else {
+    // position fully converted to token1
+    amount0 = 0;
+    amount1 = liquidity * (P_upper - P_lower);
+}
+
+////10/22
+
+to do- work on vault unifer handle assets deposit into lp make a funciton before to calculate amounts needed t deposit like a quote
+
+so u see how for uniswap v3 u see how u input how much u want to deposit for a sset and it calculate show much u have t deposit for th other asse how to find that out
