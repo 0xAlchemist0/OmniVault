@@ -10,18 +10,40 @@ pragma solidity ^0.8.20;
 import {ISwapHandler} from "./ISwapHandler.sol";
 import {VaultUnifier} from "./VaultUnifier.sol";
 
-contract VaultAdapter is OFTAdapter, IRouter, OVaultComposer {
+contract VaultAdapter is OFTAdapter, IRouter {
+    struct Packet {
+        //will fix and store n sperate files  later
+        uint32 _dstEid; // destination endpoint ID (chain ID in LayerZero format)
+        bytes32 receiver; // address of destination contract (in bytes32 form) this contracts address
+        bytes payload; // encoded data you want to send
+        bytes32 executor; // usually address(0) unless using custom executor
+    }
+    //just for now i know its sloppy we will clean when i hav flow set down :( refactor code)
+    struct PacketTwo {
+        uint64 nonce;
+        uint32 srcEid;
+        address sender;
+        uint32 dstEid;
+        bytes32 receiver;
+        bytes32 guid;
+        bytes message;
+    }
     address public vaultAsset;
     //this is the asst e convert to wrappd sonic
     //for now we try t use omnichain btc cuz sonic dont got alot of ofts
     address public oAsset = 0x0555e30da8f98308edb960aa94c0db47230d2b9c;
     Vault vault;
+    //does message sending and recieveing
     OVaultComposer oVaultComposer;
 
     VaultUnifier public unifiedVault;
     ISwaphandler public dexRouter;
     bool isMainAsset;
+    uint32 dstEid;
+    uint32 srcId;
+    address _endpoint;
 
+    //sonic endpoint id 30332
     //here we set the endpoint this is what allows us to send and compose the messgaes we recieve
     constructor(
         address _token,
@@ -30,7 +52,8 @@ contract VaultAdapter is OFTAdapter, IRouter, OVaultComposer {
         address _unifiedVault,
         address _router,
         address _oVaultCOmposer,
-        bool _isMainAsset
+        bool _isMainAsset,
+        address _hubChainId
     ) OFTAdapter(_token, _lzEndpoint, _delegate) Ownable(_delegate) {
         //each vault will have sperate composers
         oVaultCOmposer = _oVaultComposer;
@@ -41,12 +64,26 @@ contract VaultAdapter is OFTAdapter, IRouter, OVaultComposer {
         dexRouter = _router;
         unifiedVault = _unifiedVault;
         _isMainAsset = isMainAsset;
+        dstEid = _hubChainId;
+        //every l0 asset should have this funciton
+        _endpoint = vaultAsset.endpoint();
     } //rmember t implement ownble and security check each function when done
 
     function setOAsset(address _oAsset) external {
         //n withdraw when updated this possibly wont be able to happen everything is fixed system works in a fixed manner
         //over time contracts will be upgraded with an improved flow this is just an initial setup flow
         oAsset = _oAsset;
+    }
+
+    //gets current layer zer eid
+    //this is the endpoint id from the chain we are depositing for example base -> sonic
+    function getEid() returns (uint132) {
+        uint132 eid = _endpoint.eid();
+        return eid;
+    }
+
+    function getSrcId() external returns (uint256) {
+        return srcId;
     }
 
     //aount out min is the _assets from swap and deposit
@@ -94,8 +131,39 @@ contract VaultAdapter is OFTAdapter, IRouter, OVaultComposer {
         // vaultAsset.safeTransferFrom();
         //we need _user to store how much they hold in the vault
         //deposits the asset into the vault
+        //transfer assets into this contract bridge using the send function
+        //so this the flow transfer the assets into this contract
+        //using the oft built in function we send to this contract again but on another chain
+        //transfer in here needs spending approval beofr excecutiong
+        vaultAsset.transferFrom(msg.sender, address(this), _amount);
+        bridgeAsset(_amount);
+
         if (isMainAsset) vault.deposit(_amount, _user);
         else swapAndDeposit(_amount, _user);
+    }
+
+    function bridgeAsset(uint256 _amount) private {
+        //         struct Packet {
+        //     uint64 nonce;
+        //     uint32 srcEid;
+        //     address sender;
+        //     uint32 dstEid;
+        //     bytes32 receiver;
+        //     bytes32 guid;
+        //     bytes message;
+        // }
+        //        Packet calldata _packet,
+        // bytes calldata _options,
+        // bool _payInLzToken
+        uint132 srcEid = getEid();
+        PacketTwo _message = PacketTwo(
+            srcEid,
+            address(this),
+            dstEid,
+            abi.encode(address(this), address(this), _amount),
+            false
+        );
+        vaultAsset.send();
     }
 
     //asets should be the amount we are depositing for usdc
