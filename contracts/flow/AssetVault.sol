@@ -35,6 +35,11 @@ contract AssetVault is ERC4626 {
         return asset;
     }
 
+
+    function approveSpending(address _spender, uint256 _amount)private{
+     asset.approve(_spender, _amount);
+    }
+
 //code gets leaned upone flow gets layed out properly***
     function _deposit(uint256 _assets, address _user) public {
         // checks that the deposited amount is greater than zero.

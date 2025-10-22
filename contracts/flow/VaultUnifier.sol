@@ -40,6 +40,7 @@ contract VaultUnifier {
         poolManager = _poolManager;
     }
 
+    //we can just use the vaults public mappint of assets held lets inherit it
     //this is what is returned from the quote we use this so we dont have to write a shit ton of code
     // /prolly better t put in another file
 

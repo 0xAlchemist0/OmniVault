@@ -8,9 +8,12 @@ pragma solidity ^0.8.20;
 
 // /there wil be two adapters deployrf because each adaper should be unique one vault per adapter due to oftadapters constructor nature
 import {ISwapHandler} from "./ISwapHandler.sol";
+import {MessagingFee} from "./interfaces/ILayerZeroEndpointV2.sol";
+
 import {VaultUnifier} from "./VaultUnifier.sol";
 
-contract VaultAdapter is OFTAdapter, IRouter {
+contract VaultAdapter is OFTAdapter, IRouter, ILayerZeroEndpointV2 {
+    mapping(address => uint256) assestsDeposited;
     struct Packet {
         //will fix and store n sperate files  later
         uint32 _dstEid; // destination endpoint ID (chain ID in LayerZero format)
@@ -82,10 +85,6 @@ contract VaultAdapter is OFTAdapter, IRouter {
         return eid;
     }
 
-    function getSrcId() external returns (uint256) {
-        return srcId;
-    }
-
     //aount out min is the _assets from swap and deposit
     //routes is struct {from, to, stable}
     //from token ur selling, to token you wanna recieve, stable or not
@@ -119,6 +118,49 @@ contract VaultAdapter is OFTAdapter, IRouter {
 
     //     return quote;
     // }
+    struct MessagingParams {
+        uint32 dstEid;
+        bytes32 receiver;
+        bytes message;
+        bytes options;
+        bool payInLzToken;
+    }
+
+    function excecuteCall(
+        uint256 _amount,
+        address _user,
+        bool isWithdraw
+    ) external {
+        vaultAsset.transferFrom(msg.sender, address(this), _amount);
+        bridgeAsset(_amount);
+        bytes opt = OptionsBuilder.addExecutorLzReceiveOption(200_000, 0);
+        bytes _mess;
+        if (isWithdraw) {
+            _mess = abi.encodeWithSignature(
+                "executeDeposit(uint256, address)",
+                _amount,
+                _user
+            );
+        } else {
+            _mess = abi.encodeWithSignature(
+                "excecuteWithdraw(uint256, address)",
+                _amount,
+                _user
+            );
+        }
+        MessagingParams _message = MessagingParams({
+            dstEid: dstEid,
+            reciever: address(this),
+            message: "",
+            options: opt
+        });
+        oVaultComposer._lzsend(_message, address(this));
+    }
+
+    //we must approve from the assets contract before doing anyything
+    function excecuteWithdraw() {
+        if (isMainAsset) {}
+    }
 
     //omnivault
     //mainasset = omnidragon
@@ -135,35 +177,67 @@ contract VaultAdapter is OFTAdapter, IRouter {
         //so this the flow transfer the assets into this contract
         //using the oft built in function we send to this contract again but on another chain
         //transfer in here needs spending approval beofr excecutiong
-        vaultAsset.transferFrom(msg.sender, address(this), _amount);
-        bridgeAsset(_amount);
 
         if (isMainAsset) vault.deposit(_amount, _user);
         else swapAndDeposit(_amount, _user);
+
+        updateDepositedAssets(_amounts, _user);
     }
 
     function bridgeAsset(uint256 _amount) private {
         //         struct Packet {
         //     uint64 nonce;
-        //     uint32 srcEid;
-        //     address sender;
-        //     uint32 dstEid;
-        //     bytes32 receiver;
+        //     uint32 srcEid; //
+        //     address sender; //
+        //     uint32 dstEid; //
+        //     bytes32 receiver; //
         //     bytes32 guid;
-        //     bytes message;
+        //     bytes message; //
         // }
         //        Packet calldata _packet,
         // bytes calldata _options,
         // bool _payInLzToken
         uint132 srcEid = getEid();
         PacketTwo _message = PacketTwo(
-            srcEid,
-            address(this),
-            dstEid,
-            abi.encode(address(this), address(this), _amount),
+            srcEid, // srceEid
+            address(this), // sender
+            dstEid, //destination id dstEid
+            abi.encode(address(this), address(this), _amount), //message
+            false // pay with gas or lz token we pay normal gas of chain
+        );
+
+        // in order to send quoteoft we have to store the params in the struct below
+        //make structget quote to send message to bridge
+
+        // struct MessagingFee {
+        //     uint256 nativeFee;
+        //     uint256 lzTokenFee;
+        // }
+
+        MessagingFee memory fee = vaultAsset.quoteSend(
+            SendParam({
+                dstEid: dstEid, // ✅ destination endpoint id
+                to: bytes32(uint256(uint160(address(this)))), // ✅ receiver on destination (cast to bytes32)
+                amountLD: _amount, // ✅ amount to send
+                minAmountLD: _amount, // ✅ min amount (usually same unless slippage)
+                extraOptions: "", // ✅ leave empty unless customizing gas limits etc.
+                composeMsg: "", // ✅ optional compose data (can be empty)
+                oftCmd: ""
+            }),
             false
         );
-        vaultAsset.send();
+        //message, fees from quote, and refund address
+        vaultAsset.send(_message, fee, address(this));
+    }
+
+    struct SendParam {
+        uint32 dstEid; // Destination endpoint ID.
+        bytes32 to; // Recipient address.
+        uint256 amountLD; // Amount to send in local decimals.
+        uint256 minAmountLD; // Minimum amount to send in local decimals.
+        bytes extraOptions; // Additional options supplied by the caller to be used in the LayerZero message.
+        bytes composeMsg; // The composed message for the send() operation.
+        bytes oftCmd; // The OFT command to be executed, unused in default OFT implementations.
     }
 
     //asets should be the amount we are depositing for usdc
@@ -172,6 +246,10 @@ contract VaultAdapter is OFTAdapter, IRouter {
         //swaps to the asset we need and then deposits
         uint256 _amountRecieved = swap(_assets);
         vault.deposit(_amountRecieved, _user);
+    }
+
+    function updateDepositedAssets(uint256 _amounts, address _user) private {
+        assestsDeposited[_user] = _amounts;
     }
     //mybe hndale it like this layer zero message s we pass in the type of transaction we do and pass the sender of the message to stor there data in the contracts
 }
