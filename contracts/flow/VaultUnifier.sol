@@ -32,6 +32,9 @@ contract VaultUnifier {
     IPoolManager poolManager;
     IDragonPool pool;
     mapping(address => uint256[]) poolPositions; //we store here and update positions
+    mapping(address => uint256) positions;
+    //checks if the depositor acutallly has a position
+    mapping(address => bool) hasPosition;
 
     //wunifies both vaults vaults to perform the lp depositt
     constructor(address _vaultA, address vaultB, address _poolManager) {
@@ -57,9 +60,60 @@ contract VaultUnifier {
     // address recipient;
     // uint256 deadline;PP
     //very layer zero message should pass in the sender of the transaction this way e can check nd store each users info properly and their positons
-    function addLiquidity(MintParams calldata params, address sender) {
+    function addLiquidity(MintParams calldata params, address _user) {
+        performVaultWithdraw();
         //we set the mapping owner => positionID
-        poolPositions[sender] = poolManager.mint(params);
+        //adds liquidity to the pool and mints the nft
+        //the nft id is stored in a mappping matching the user addresss
+        poolPositions[_user] = poolManager.mint(params);
+
+        //sets to true that the user has a position already
+        hasPosition[_user] = True;
+    }
+
+    ///this struct is only here temporarily we make another library for this to make the code cleanrer
+    struct IncreaseLiquidityParams {
+        uint256 tokenId;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        uint256 deadline;
+    }
+
+    struct IncreaseLiquidityParams {
+        uint256 tokenId;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        uint256 deadline;
+    }
+
+    //adds liquidity if the position exists already this is where the mapping comes in handy
+    function addLiquidityExisting(
+        MintParams calldata params,
+        address _user
+    ) external {
+        (uint128 liquidity, uint256 amount0, uint256 amount1) = poolManager
+            .increaseLiquidity(params);
+    }
+
+    //this just trransfers from vault here so we can deposit lp from both tokens
+    //and we store how much the person add and periodically update based on lp position
+    function performVaultWithdraw(address _user) private {
+        //we dont have to store holdings here too we got the vault so we chillin
+        //withdraws from both vaults
+        uint256 _vaultABal = vaultA.assestsDeposited[user];
+        uint256 _vaultBBal = vaultB.assestsDeposited[user];
+
+        vaultA.approveSpending(address(this), _vaultABal);
+        vaultB.approveSpending(address(this), _vaultBBal);
+
+        //sends funds over from both vaults to this contract
+        //each withdraw returns the amount being withdrawn
+        uint256 _vaultAAmount = vaultA.excecuteWithdraw(_user, address(this));
+        uint256 _vaultBAmount = vaultB.excuteWithdraw(_user, address(this));
     }
 
     //inorder to add liuiditywhat we do is trnsfer the vaults assets to this contract deposit into lp and store deposits in a mapping

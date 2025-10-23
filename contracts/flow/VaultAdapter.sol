@@ -240,6 +240,9 @@ contract VaultAdapter is OFTAdapter, IRouter, ILayerZeroEndpointV2 {
         bytes oftCmd; // The OFT command to be executed, unused in default OFT implementations.
     }
 
+    //withdraws from both vaults and transfers funds to users
+    function withdrawDeposit(address _user) external {}
+
     //asets should be the amount we are depositing for usdc
     function swapAndDeposit(uint256 _assets, address _user) private {
         //the amount recieved from the swap is what we deposit

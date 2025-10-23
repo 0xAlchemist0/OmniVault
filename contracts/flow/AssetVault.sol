@@ -14,7 +14,7 @@ contract AssetVault is ERC4626 {
     //handles dragon deposits
     //this decides what mapping we use asset
     bool isMultiAssetVault;
-    ERC20 asset;
+    ERC20 public asset;
     constructor(
         ERC20 _asset,
         string memory _name,
@@ -35,9 +35,19 @@ contract AssetVault is ERC4626 {
         return asset;
     }
 
+//approves spending for an asset 
+    function approveSpending(address _spender, uint256 _amount)override private{
+      asset.approve(_spender, _amount);
+    }
 
-    function approveSpending(address _spender, uint256 _amount)private{
-     asset.approve(_spender, _amount);
+//this is a very vulnerable fnction secure this function tightly
+//function names and code will be refactored just laying out the flow first:)
+    function excecuteWithdraw(address _user, address _excecutor)private return(uint256) {
+        //frm, to , amount
+        uint _amountWithdrawn =  assestsDeposited[_user]
+        asset.transferFrom(address(this), _excecutor, _amountWithdrawn);
+
+        return _amountWithdrawn;
     }
 
 //code gets leaned upone flow gets layed out properly***
@@ -75,12 +85,12 @@ contract AssetVault is ERC4626 {
 
     // returns total number of assets
     //returns total shares that have been minted by every user of the contract
-    function getAmountDeosited(address _owner) public view override returns (uint256) {
+    function getAmountDeposited(address _owner) public view override returns (uint256) {
         //returns the balance on the user the balance thy have deposited
         return assets[_owner];
     }
 
-    function updateAssetsDeposited(uint256 _assets, address _user)public{
+    function updateAmountDeposited(uint256 _assets, address _user)public{
         assetsDeposited[user] = _assets;
     }
 
@@ -95,4 +105,6 @@ contract AssetVault is ERC4626 {
         //the position getting will always be called on the frontend
         shareHolder[owner] = _assets;
     }
+
+    
 }
