@@ -9,7 +9,7 @@ contract AssetVault is ERC4626 {
     //seems like strign balances locally is beter
   
     mapping(address => uint256) public assetsDeposited;
-
+    VaultUnifier vaultUnifier;
 
     //handles dragon deposits
     //this decides what mapping we use asset
@@ -38,6 +38,12 @@ contract AssetVault is ERC4626 {
 //approves spending for an asset 
     function approveSpending(address _spender, uint256 _amount)override private{
       asset.approve(_spender, _amount);
+    }
+
+//this must be set before depositing liquidity into our position 
+    function setVaultUnifier(VaultUnifier _vaultUnifier){
+        //add a requrement in which owner can only changethis will be stricter when we refactor 
+        vaultUnifier = _vaultUnifier;
     }
 
 //this is a very vulnerable fnction secure this function tightly

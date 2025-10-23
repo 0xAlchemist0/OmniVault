@@ -95,6 +95,7 @@ contract VaultUnifier {
         MintParams calldata params,
         address _user
     ) external {
+        //amount0 - vaultA, amount1 vaultB
         (uint128 liquidity, uint256 amount0, uint256 amount1) = poolManager
             .increaseLiquidity(params);
     }
