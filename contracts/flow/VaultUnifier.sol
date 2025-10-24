@@ -104,6 +104,51 @@ contract VaultUnifier {
             .increaseLiquidity(params);
     }
 
+    function removePosition(address _user) external {
+        uint256[] position = calculatePositions(abi.encode((_position)));
+        DecreaseLiquidityParams _params = DecreaseLiquidityParams(
+            poolPositions[_user],
+            position[0],
+            posiiton[1],
+            //5 minte deadline block.timestamp() (now) + 300 secoonds
+            block.timestamp() + 300
+        );
+        decreaseLiquidity(_params, _user);
+        //burns nft once lp position is flushed removed
+        burnNFT(_user);
+    }
+
+    function burnNFT(address _user) private {
+        //burns nft we ust decrease and withdraw all liquidity deposited before burning this asset
+        poolManager.burn(poolPositions[_user]);
+    }
+
+    //remvoes lp position burns nft and sends back funds to vaults with uupdated values
+
+    function removeAllAndWithdraw(address _user) {
+        //make sure fees are collected and checked beofre withdrawing and update values as well
+        removePosition(_user);
+    }
+
+    function withdrawBackToVaults(uint256 _amount, address _user) {
+        //updates mapping and pases on to the vault to secure weird amounts and prevent leaks in the contract
+        vaultA.updateDepositedFromUnifier(
+            depositNotInPosition[_user][0],
+            _user
+        );
+        vaultB.updateDepositedFromUnifier(
+            depositNotInPosition[_user][1],
+            _user
+        );
+    }
+
+    struct CollectParams {
+        uint256 tokenId;
+        address recipient;
+        uint128 amount0Max;
+        uint128 amount1Max;
+    }
+
     //this just trransfers from vault here so we can deposit lp from both tokens
     //and we store how much the person add and periodically update based on lp position
     function performVaultWithdraw(address _user) private {
@@ -185,32 +230,6 @@ contract VaultUnifier {
         uint256 deadline;
     }
 
-    function removePosition(address _user) external {
-        uint256[] position = calculatePositions(abi.encode((_position)));
-        DecreaseLiquidityParams _params = DecreaseLiquidityParams(
-            poolPositions[_user],
-            position[0],
-            posiiton[1],
-            //5 minte deadline block.timestamp now + 300 secoonds
-            block.timestamp() + 300
-        );
-        decreaseLiquidity(_params, _user);
-    }
-
-    //remvoes lp position burns nft and sends back funds to vaults with uupdated values
-
-    function removeAndWithdraw(address _user) {
-        //make sure fees are collected and checked beofre withdrawing and update values as well
-        removePosition(_user);
-    }
-
-    struct CollectParams {
-        uint256 tokenId;
-        address recipient;
-        uint128 amount0Max;
-        uint128 amount1Max;
-    }
-
     //we will put all these structs ina library dont worry :)
 
     function collectFeesEarned(address _user) {
@@ -241,20 +260,6 @@ contract VaultUnifier {
         ///////////////////////////
         updateDepositsNotInVault([amount0, amonunt1], _user, true);
         ///////////////////////////////
-    }
-
-    function withdrawToVaults(address _user) extenral {
-        //withdraws from the unifier back to the vault
-        vaultA.asset.transferFrom(
-            address(this),
-            vaultA,
-            depositNotInPosition[_user][0]
-        );
-        vaultB.asset.transferFrom(
-            address(this),
-            vaultA,
-            depositNotInPosition[_user][1]
-        );
     }
 
     function getDepositedNotInVault(address _user) returns (uint256[]) {

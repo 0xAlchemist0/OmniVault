@@ -38,6 +38,10 @@ interface IPoolManager is IncreaseLiquidityParams {
         checkDeadline(params.deadline)
         returns (uint128 liquidity, uint256 amount0, uint256 amount1);
 
+    function burn(
+        uint256 tokenId
+    ) external payable override isAuthorizedForToken(tokenId);
+
     //decrease withdrawTokens from pool
 
     // struct DecreaseLiquidityParams {

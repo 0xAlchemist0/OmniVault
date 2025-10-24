@@ -27,6 +27,11 @@ contract AssetVault is ERC4626 {
         asset = _asset;
     }
 
+    function updateDepositedFromUnifier(uint256 _amount, address _user) {
+        //we must update beofore edepositing into the vault
+        depositedFromUnifier[_user] = _amount;
+    }
+
     //max withdraw get share abalances of user, how much they have deposited
     /**
      * @notice function to deposit assets and receive vault tokens in exchange
