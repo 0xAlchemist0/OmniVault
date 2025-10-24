@@ -35,6 +35,8 @@ contract VaultUnifier {
     mapping(address => uint256) positions;
     //checks if the depositor acutallly has a position
     mapping(address => bool) hasPosition;
+    //index 0 vaulta , inex1 vaultb
+    mapping(address => uint256[]) depositNotInPosition;
 
     //wunifies both vaults vaults to perform the lp depositt
     constructor(address _vaultA, address vaultB, address _poolManager) {
@@ -45,10 +47,10 @@ contract VaultUnifier {
 
     //we can just use the vaults public mappint of assets held lets inherit it
     //this is what is returned from the quote we use this so we dont have to write a shit ton of code
-    // /prolly better t put in another file
+    //prolly better t put in another file
 
-    //mint parms struct
-    //     address token0;
+    //MintParams struct
+    // address token0;
     // address token1;
     // int24 tickSpacing;
     // int24 tickLower;
@@ -58,13 +60,15 @@ contract VaultUnifier {
     // uint256 amount0Min;
     // uint256 amount1Min;
     // address recipient;
-    // uint256 deadline;PP
+    // uint256 deadline;
     //very layer zero message should pass in the sender of the transaction this way e can check nd store each users info properly and their positons
     function addLiquidity(MintParams calldata params, address _user) {
+        //funds being in the contrat already we can control what happens make lp store data in mappings by depositor
         performVaultWithdraw();
         //we set the mapping owner => positionID
         //adds liquidity to the pool and mints the nft
         //the nft id is stored in a mappping matching the user addresss
+        //each mint returns the posito id /tokenid of the nft minted
         poolPositions[_user] = poolManager.mint(params);
 
         //sets to true that the user has a position already
@@ -122,11 +126,12 @@ contract VaultUnifier {
     //uint - positive, int- both
     //returns an array contains the balance of tokena and tokenb use equation then return and we update values
     //calldta type means the valu is read only no copy is made most efficient and heapest
-    function calculatePostions(
-        bytes calldata _postionEncoded
+    function calculateAndUpdatePostions(
+        bytes calldata _postionEncoded,
+        address _user
     ) returns (uint256[]) {
-        uint56 amount0 = 0;
-        uint56 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 0;
 
         //eveythkng will be in one struct
         //we dont want an overflow weeoe for 1001
@@ -161,11 +166,130 @@ contract VaultUnifier {
             amount1 = liquidity * (P_upper - P_lower);
         }
 
-        return [amount0, amount1];
+        //updates amount based on position
+
+        vaultA.updateAmountDeposited(amount0, _user);
+        vaultB.updateAmountDeposited(amount1, _user);
+
+        return [amount0, amount1, liquidity];
     }
 
-    //follows th shadowswap dex fucntions
-    function getPosition(address _owner) external returns (uint256[]) {
+    //now we work on the withdrawing flow
+    //removes entirley the position
+
+    struct DecreaseLiquidityParams {
+        uint256 tokenId;
+        uint128 liquidity;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        uint256 deadline;
+    }
+
+    function removePosition(address _user) external {
+        uint256[] position = calculatePositions(abi.encode((_position)));
+        DecreaseLiquidityParams _params = DecreaseLiquidityParams(
+            poolPositions[_user],
+            position[0],
+            posiiton[1],
+            //5 minte deadline block.timestamp now + 300 secoonds
+            block.timestamp() + 300
+        );
+        decreaseLiquidity(_params, _user);
+    }
+
+    //remvoes lp position burns nft and sends back funds to vaults with uupdated values
+
+    function removeAndWithdraw(address _user) {
+        //make sure fees are collected and checked beofre withdrawing and update values as well
+        removePosition(_user);
+    }
+
+    struct CollectParams {
+        uint256 tokenId;
+        address recipient;
+        uint128 amount0Max;
+        uint128 amount1Max;
+    }
+
+    //we will put all these structs ina library dont worry :)
+
+    function collectFeesEarned(address _user) {
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        ) = getPosition(_user);
+        CollectParams params = CollectParams(
+            poolPositions[_user],
+            address(this),
+            tokensOwed0,
+            tokensOwed2
+        );
+        //collects fees and returns the fees amount collected for vaultA asset and vaultB asset
+        (uint128 amount0, uint128 amoount1) = poolManager.collect(params);
+        ////needs a security overview
+        //since we ar collecting fees we have to update how much user should have in the vault deposited
+        vaultA.updateAmountDeposited(amount0, _user);
+        vaultB.updateAmountDeposited(amount1, _user);
+        ///////////////////////////
+        updateDepositsNotInVault([amount0, amonunt1], _user);
+        ///////////////////////////////
+    }
+
+    //updates it here no repetive code i will mke this as clean as a mr clean
+    function updateDepositsNotInVault(
+        uint256[] _amounts,
+        address _user,
+        bool isIncrease
+    ) private {
+        if (isIncrease) {
+            //updates by adding to each
+            depositNotInPosition[_user][0] += _amounts[0];
+            depositNotInPosition[_user][1] += _amounts[1];
+        } else {
+            //updates by subtracting  to each
+            //dont thik w will use this but may come in handy if user redeposits into the positon witht he asset in the vault no deposited into lp
+            depositNotInPosition[_user][0] -= _amounts[0];
+            depositNotInPosition[_user][1] -= _amounts[1];
+        }
+    }
+
+    //now create a logic to handle the decrease or position removal
+
+    //this removes only some tokens from the position
+    function decreaseLiquidity(
+        DecreaseLiquidityParams calldata params,
+        address _user
+    ) external {
+        (uint256 amount0, unt256 amount1) = poolManager.decrease(params);
+        //will fix later on when we refactor this stores how much was decreased we later on calculate when sending tokens back to the user
+        //increae cuz if u dont add its gonna make a prob in ca solidity is tricky :)
+        depositNotInPosition[_user] += [amount0, amount1];
+    }
+
+    function getPosition(
+        address _user
+    )
+        returns (
+            address token0,
+            address token1,
+            int24 tickSpacing,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        )
+    {
         (
             address token0,
             address token1,
@@ -178,6 +302,36 @@ contract VaultUnifier {
             uint128 tokensOwed0,
             uint128 tokensOwed1
         ) = poolManager.positions(poolManager[_owner]);
+        return (
+            token0,
+            token1,
+            tickSpacing,
+            tickLower,
+            tickUpper,
+            liquidity,
+            feeGrowthInside0LastX128,
+            feeGrowthInside1LastX128,
+            tokensOwed0,
+            tokensOwed1
+        );
+    }
+
+    //follows th shadowswap dex fucntions
+    //returns balances for vault a and b for user
+    function getPositionBalances(address _user) external returns (uint256[]) {
+        (
+            address token0,
+            address token1,
+            int24 tickSpacing,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        ) = getPosition(_user);
+
         (
             uint160 sqrtPriceX96,
             int24 tick,
@@ -207,7 +361,7 @@ contract VaultUnifier {
             feeProtocol,
             unlocked
         );
-
+        //set and return too jut in case it doesnt update on time
         uint256[] position = calculatePositions(abi.encode((_position)));
 
         return position;

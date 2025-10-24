@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
 import "https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC4626.sol";
 //ws-omnidragon
@@ -48,10 +48,15 @@ contract AssetVault is ERC4626 {
 
 //this is a very vulnerable fnction secure this function tightly
 //function names and code will be refactored just laying out the flow first:)
-    function excecuteWithdraw(address _user, address _excecutor)private return(uint256) {
+//vault unifer must be set before calling this 
+    function excecuteWithdraw(address _user)private return(uint256) {
         //frm, to , amount
-        uint _amountWithdrawn =  assestsDeposited[_user]
-        asset.transferFrom(address(this), _excecutor, _amountWithdrawn);
+
+        //require block checks if vaultunifer is present 
+        require(vaultUnifier !== address(0), "VaultUnifier not defined!");
+        uint256 _amountWithdrawn =  assestsDeposited[_user];
+        //transfers to vault unifier
+        asset.transferFrom(address(this), vaultUnifier, _amountWithdrawn);
 
         return _amountWithdrawn;
     }

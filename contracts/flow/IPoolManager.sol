@@ -18,6 +18,16 @@ import "https://github.com/Shadow-Exchange/shadow-core/blob/main/contracts/CL/pe
 import "https://github.com/Shadow-Exchange/shadow-core/blob/main/contracts/CL/periphery/base/PeripheryValidation.sol";
 
 interface IPoolManager is IncreaseLiquidityParams {
+    //collect fees earned and get returned the fees earned from vault a aset and vaultb asset
+    function collect(
+        CollectParams calldata params
+    )
+        external
+        payable
+        override
+        isAuthorizedForToken(params.tokenId)
+        returns (uint256 amount0, uint256 amount1);
+
     //adds liquidity to te position
     function increaseLiquidity(
         IncreaseLiquidityParams calldata params
