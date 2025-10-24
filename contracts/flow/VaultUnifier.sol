@@ -239,8 +239,27 @@ contract VaultUnifier {
         vaultA.updateAmountDeposited(amount0, _user);
         vaultB.updateAmountDeposited(amount1, _user);
         ///////////////////////////
-        updateDepositsNotInVault([amount0, amonunt1], _user);
+        updateDepositsNotInVault([amount0, amonunt1], _user, true);
         ///////////////////////////////
+    }
+
+    function withdrawToVaults(address _user) extenral {
+        //withdraws from the unifier back to the vault
+        vaultA.asset.transferFrom(
+            address(this),
+            vaultA,
+            depositNotInPosition[_user][0]
+        );
+        vaultB.asset.transferFrom(
+            address(this),
+            vaultA,
+            depositNotInPosition[_user][1]
+        );
+    }
+
+    function getDepositedNotInVault(address _user) returns (uint256[]) {
+        //returns the assets the user has i the vault  unifier tat are not in the position
+        return depositNotInPosition[_user];
     }
 
     //updates it here no repetive code i will mke this as clean as a mr clean
@@ -271,7 +290,7 @@ contract VaultUnifier {
         (uint256 amount0, unt256 amount1) = poolManager.decrease(params);
         //will fix later on when we refactor this stores how much was decreased we later on calculate when sending tokens back to the user
         //increae cuz if u dont add its gonna make a prob in ca solidity is tricky :)
-        depositNotInPosition[_user] += [amount0, amount1];
+        updateDepositsNotInVault([amount0, amount1], _user, true);
     }
 
     function getPosition(

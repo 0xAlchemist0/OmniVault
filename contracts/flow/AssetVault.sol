@@ -2,19 +2,23 @@
 pragma solidity ^0.8.7;
 
 import "https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC4626.sol";
+
 //ws-omnidragon
 //just deploy two of thse no need for two similar vault contracts
 contract AssetVault is ERC4626 {
     // a mapping that checks if a user has deposited the token
     //seems like strign balances locally is beter
-  
+
     mapping(address => uint256) public assetsDeposited;
+    mapping(address => uint256) public depositedFromUnifier;
+
     VaultUnifier vaultUnifier;
 
     //handles dragon deposits
     //this decides what mapping we use asset
     bool isMultiAssetVault;
     ERC20 public asset;
+
     constructor(
         ERC20 _asset,
         string memory _name,
@@ -30,38 +34,40 @@ contract AssetVault is ERC4626 {
      */
     //  Sonic (hub) is the main vault. It’s where the real tokens are kept and where the real deposits and withdrawals happen.
 
-    funtion _getAssetsDeposited() returns (EC20){
-
+    function _getAssetsDeposited() returns (EC20) {
         return asset;
     }
 
-//approves spending for an asset 
-    function approveSpending(address _spender, uint256 _amount)override private{
-      asset.approve(_spender, _amount);
+    //approves spending for an asset
+    function approveSpending(
+        address _spender,
+        uint256 _amount
+    ) private override {
+        asset.approve(_spender, _amount);
     }
 
-//this must be set before depositing liquidity into our position 
-    function setVaultUnifier(VaultUnifier _vaultUnifier){
-        //add a requrement in which owner can only changethis will be stricter when we refactor 
+    //this must be set before depositing liquidity into our position
+    function setVaultUnifier(VaultUnifier _vaultUnifier) {
+        //add a requrement in which owner can only changethis will be stricter when we refactor
         vaultUnifier = _vaultUnifier;
     }
 
-//this is a very vulnerable fnction secure this function tightly
-//function names and code will be refactored just laying out the flow first:)
-//vault unifer must be set before calling this 
-    function excecuteWithdraw(address _user)private return(uint256) {
+    //this is a very vulnerable fnction secure this function tightly
+    //function names and code will be refactored just laying out the flow first:)
+    //vault unifer must be set before calling this
+    function excecuteWithdraw(address _user) private returns (uint256) {
         //frm, to , amount
 
-        //require block checks if vaultunifer is present 
-        require(vaultUnifier !== address(0), "VaultUnifier not defined!");
-        uint256 _amountWithdrawn =  assestsDeposited[_user];
+        //require block checks if vaultunifer is present
+        require(vaultUnifier != address(0), "VaultUnifier not defined!");
+        uint256 _amountWithdrawn = assestsDeposited[_user];
         //transfers to vault unifier
         asset.transferFrom(address(this), vaultUnifier, _amountWithdrawn);
 
         return _amountWithdrawn;
     }
 
-//code gets leaned upone flow gets layed out properly***
+    //code gets leaned upone flow gets layed out properly***
     function _deposit(uint256 _assets, address _user) public {
         // checks that the deposited amount is greater than zero.
         require(_assets > 0, "Deposit less than Zero");
@@ -96,12 +102,14 @@ contract AssetVault is ERC4626 {
 
     // returns total number of assets
     //returns total shares that have been minted by every user of the contract
-    function getAmountDeposited(address _owner) public view override returns (uint256) {
+    function getAmountDeposited(
+        address _owner
+    ) public view override returns (uint256) {
         //returns the balance on the user the balance thy have deposited
         return assets[_owner];
     }
 
-    function updateAmountDeposited(uint256 _assets, address _user)public{
+    function updateAmountDeposited(uint256 _assets, address _user) public {
         assetsDeposited[user] = _assets;
     }
 
@@ -116,6 +124,4 @@ contract AssetVault is ERC4626 {
         //the position getting will always be called on the frontend
         shareHolder[owner] = _assets;
     }
-
-    
 }
